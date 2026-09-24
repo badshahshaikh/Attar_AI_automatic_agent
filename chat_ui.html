@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MS Fragrances — AI Product Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & tokens ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-app:       #ece5dd;   /* WhatsApp wallpaper beige */
+      --bg-header:    #128c7e;   /* WhatsApp header teal */
+      --bg-input:     #f0f0f0;
+      --bg-sent:      #dcf8c6;   /* customer bubble green */
+      --bg-recv:      #ffffff;   /* AI bubble white */
+      --bg-details:   #f7f7f7;
+      --text-primary: #111;
+      --text-meta:    #667781;
+      --text-header:  #fff;
+      --accent:       #128c7e;
+      --accent-hover: #0e7568;
+      --border:       #d9d9d9;
+      --shadow:       0 1px 3px rgba(0,0,0,.12);
+      --radius:       12px;
+      --radius-sm:    8px;
+      --font:         'Inter', system-ui, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font);
+      background: #202c33;   /* dark outer shell */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── App shell ──────────────────────────────────────────────────── */
+    #app {
+      width: 100%;
+      max-width: 480px;
+      height: 100dvh;
+      max-height: 900px;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-app);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    header {
+      background: var(--bg-header);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: #fff3;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .header-info { flex: 1; min-width: 0; }
+    .header-info h1 {
+      font-size: 16px; font-weight: 600;
+      color: var(--text-header);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .header-info p {
+      font-size: 12px; color: rgba(255,255,255,.75);
+      margin-top: 1px;
+    }
+
+    #btn-new-chat {
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.35);
+      color: #fff;
+      font-size: 12px; font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    #btn-new-chat:hover { background: rgba(255,255,255,.30); }
+
+    /* ── Config bar (backend URL) ───────────────────────────────────── */
+    #config-bar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    #config-bar label { font-size: 11px; color: var(--text-meta); white-space: nowrap; }
+    #api-url-input {
+      flex: 1;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: monospace;
+      color: #333;
+      background: #fafafa;
+      outline: none;
+    }
+    #api-url-input:focus { border-color: var(--accent); }
+    #btn-save-url {
+      font-size: 11px; font-weight: 500;
+      padding: 4px 10px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 6px; cursor: pointer;
+      transition: background .15s;
+    }
+    #btn-save-url:hover { background: var(--accent-hover); }
+
+    /* ── Messages area ──────────────────────────────────────────────── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scroll-behavior: smooth;
+    }
+
+    /* ── Message row ─────────────────────────────────────────────────── */
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 82%;
+      animation: fadeUp .2s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-row.sent  { align-self: flex-end; align-items: flex-end; }
+    .msg-row.recv  { align-self: flex-start; align-items: flex-start; }
+
+    .bubble {
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .sent  .bubble { background: var(--bg-sent); border-bottom-right-radius: 4px; }
+    .recv  .bubble { background: var(--bg-recv); border-bottom-left-radius: 4px; }
+
+    .bubble .meta {
+      display: block;
+      font-size: 10px;
+      color: var(--text-meta);
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    /* ── Expandable details panel ────────────────────────────────────── */
+    .details-wrap {
+      margin-top: 4px;
+      width: 100%;
+    }
+
+    details {
+      background: var(--bg-details);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      font-size: 12px;
+    }
+
+    summary {
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--accent);
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    summary::before {
+      content: '▶';
+      font-size: 9px;
+      transition: transform .15s;
+    }
+    details[open] summary::before { transform: rotate(90deg); }
+
+    .details-body {
+      padding: 8px 10px 10px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .details-section h4 {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-meta);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 4px;
+    }
+
+    /* Tool call pills */
+    .tool-call {
+      background: #e8f5e9;
+      border: 1px solid #c8e6c9;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: monospace;
+      font-size: 11.5px;
+      color: #2e7d32;
+    }
+    .tool-call span { color: #555; font-weight: 400; }
+
+    /* Product result cards */
+    .product-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 2px 8px;
+      font-size: 12px;
+    }
+    .product-card .name { font-weight: 600; color: #111; grid-column: 1/-1; }
+    .product-card .size { color: var(--text-meta); }
+    .product-card .price { font-weight: 600; color: #333; }
+    .product-card .stock-yes { color: #2e7d32; font-weight: 500; }
+    .product-card .stock-no  { color: #c62828; font-weight: 500; }
+    .product-card .desc { color: #555; font-size: 11px; grid-column: 1/-1; margin-top: 2px; }
+
+    .no-results { color: var(--text-meta); font-style: italic; padding: 2px 0; }
+
+    /* raw JSON fallback */
+    .raw-json {
+      background: #f9f9f9;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #444;
+    }
+
+    /* ── Loading indicator ───────────────────────────────────────────── */
+    .typing-row {
+      align-self: flex-start;
+      animation: fadeUp .2s ease;
+    }
+    .typing {
+      background: var(--bg-recv);
+      border-radius: var(--radius);
+      border-bottom-left-radius: 4px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      display: flex; gap: 5px; align-items: center;
+    }
+    .typing span {
+      width: 8px; height: 8px;
+      background: #999;
+      border-radius: 50%;
+      display: inline-block;
+      animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30%          { transform: translateY(-6px); }
+    }
+
+    /* ── Error toast ─────────────────────────────────────────────────── */
+    #error-toast {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      left: 50%; transform: translateX(-50%);
+      background: #c62828; color: #fff;
+      font-size: 13px; font-weight: 500;
+      padding: 10px 18px;
+      border-radius: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.3);
+      z-index: 100;
+      max-width: calc(100% - 32px);
+      text-align: center;
+      animation: fadeUp .2s ease;
+    }
+
+    /* ── Input bar ───────────────────────────────────────────────────── */
+    #input-bar {
+      background: var(--bg-input);
+      padding: 8px 10px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    #message-input {
+      flex: 1;
+      background: #fff;
+      border: none;
+      border-radius: 22px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-family: var(--font);
+      resize: none;
+      outline: none;
+      max-height: 120px;
+      overflow-y: auto;
+      line-height: 1.4;
+      box-shadow: var(--shadow);
+      color: #111;
+    }
+    #message-input::placeholder { color: #aaa; }
+
+    #btn-send {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background .15s, transform .1s;
+      box-shadow: var(--shadow);
+    }
+    #btn-send:hover { background: var(--accent-hover); }
+    #btn-send:active { transform: scale(.93); }
+    #btn-send:disabled { background: #aaa; cursor: default; }
+
+    /* ── Empty state ─────────────────────────────────────────────────── */
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text-meta);
+      font-size: 14px;
+      padding: 24px;
+      text-align: center;
+    }
+    #empty-state .icon { font-size: 48px; }
+    #empty-state strong { color: #444; font-size: 15px; }
+
+    .suggestions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+      width: 100%;
+      max-width: 300px;
+    }
+    .suggestion-btn {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--accent);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .15s, background .15s;
+    }
+    .suggestion-btn:hover {
+      border-color: var(--accent);
+      background: #f0faf9;
+    }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────── */
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-thumb { background: #bbb; border-radius: 2px; }
+
+    /* ── Full-height on small screens ────────────────────────────────── */
+    @media (max-width: 500px) {
+      html, body { background: var(--bg-app); }
+      #app { max-height: none; border-radius: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <header>
+    <div class="avatar">🌸</div>
+    <div class="header-info">
+      <h1>MS Fragrances Assistant</h1>
+      <p id="status-text">Online · AI Product Helper</p>
+    </div>
+    <button id="btn-new-chat" title="Start a new conversation">New Chat</button>
+  </header>
+
+  <!-- ── Config bar ──────────────────────────────────────────────── -->
+  <div id="config-bar">
+    <label for="api-url-input">Backend:</label>
+    <input id="api-url-input" type="text" value="http://localhost:8000" spellcheck="false" />
+    <button id="btn-save-url">Save</button>
+  </div>
+
+  <!-- ── Message window ──────────────────────────────────────────── -->
+  <div id="messages" role="log" aria-live="polite" aria-label="Chat messages">
+    <!-- Empty state shown when no messages exist -->
+    <div id="empty-state">
+      <div class="icon">🧴</div>
+      <strong>Ask about any product</strong>
+      <p>I can check prices, sizes, stock & descriptions from our live inventory.</p>
+      <div class="suggestions">
+        <button class="suggestion-btn">Do you have Oud in 6ml?</button>
+        <button class="suggestion-btn">Rose attar ka price kya hai?</button>
+        <button class="suggestion-btn">Kya Musk Tahara available hai?</button>
+        <button class="suggestion-btn">Tell me about Black Oud</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Input bar ───────────────────────────────────────────────── -->
+  <div id="input-bar">
+    <textarea
+      id="message-input"
+      rows="1"
+      placeholder="Type a message…"
+      aria-label="Message input"
+    ></textarea>
+    <button id="btn-send" aria-label="Send message" disabled>
+      &#10148;
+    </button>
+  </div>
+
+</div>
+
+<!-- Error toast -->
+<div id="error-toast" role="alert"></div>
+
+<script>
+  /* ================================================================
+     State
+  ================================================================ */
+  let conversationHistory = [];   // updated_history from backend
+  let isLoading = false;
+
+  /* ================================================================
+     DOM refs
+  ================================================================ */
+  const messagesEl   = document.getElementById('messages');
+  const inputEl      = document.getElementById('message-input');
+  const sendBtn      = document.getElementById('btn-send');
+  const newChatBtn   = document.getElementById('btn-new-chat');
+  const errorToast   = document.getElementById('error-toast');
+  const apiUrlInput  = document.getElementById('api-url-input');
+  const saveUrlBtn   = document.getElementById('btn-save-url');
+  const emptyState   = document.getElementById('empty-state');
+  const statusText   = document.getElementById('status-text');
+
+  /* ================================================================
+     Config — backend URL
+  ================================================================ */
+  const STORAGE_KEY_URL = 'msf_backend_url';
+  apiUrlInput.value = localStorage.getItem(STORAGE_KEY_URL) || 'http://localhost:8000';
+
+  function getBaseUrl() {
+    return apiUrlInput.value.replace(/\/$/, '');
+  }
+
+  saveUrlBtn.addEventListener('click', () => {
+    localStorage.setItem(STORAGE_KEY_URL, apiUrlInput.value.trim());
+    showToast('Backend URL saved ✓', '#128c7e');
+  });
+
+  /* ================================================================
+     Auto-resize textarea
+  ================================================================ */
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+    sendBtn.disabled = inputEl.value.trim() === '' || isLoading;
+  });
+
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!sendBtn.disabled) sendMessage();
+    }
+  });
+
+  /* ================================================================
+     Suggestion chips
+  ================================================================ */
+  document.querySelectorAll('.suggestion-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      inputEl.value = btn.textContent;
+      inputEl.dispatchEvent(new Event('input'));
+      sendMessage();
+    });
+  });
+
+  /* ================================================================
+     New Chat
+  ================================================================ */
+  newChatBtn.addEventListener('click', () => {
+    if (isLoading) return;
+    conversationHistory = [];
+    messagesEl.innerHTML = '';
+    messagesEl.appendChild(emptyState);
+    emptyState.style.display = 'flex';
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+  });
+
+  /* ================================================================
+     Send button
+  ================================================================ */
+  sendBtn.addEventListener('click', sendMessage);
+
+  /* ================================================================
+     Core: send a message
+  ================================================================ */
+  async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text || isLoading) return;
+
+    // Hide empty state
+    emptyState.style.display = 'none';
+
+    // Append user bubble
+    appendBubble('sent', text);
+
+    // Clear input
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    setLoading(true);
+
+    // Show typing indicator
+    const typingEl = appendTyping();
+
+    try {
+      const response = await fetch(`${getBaseUrl()}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          history: conversationHistory,
+        }),
+      });
+
+      if (!response.ok) {
+        let detail = `HTTP ${response.status}`;
+        try { const err = await response.json(); detail = err.detail || detail; } catch {}
+        throw new Error(detail);
+      }
+
+      const data = await response.json();
+
+      // Save updated history for the next call
+      conversationHistory = data.updated_history || [];
+
+      // Remove typing indicator and show reply
+      typingEl.remove();
+      appendBubble('recv', data.reply, data.tool_calls_made, data.tool_results);
+
+    } catch (err) {
+      typingEl.remove();
+      const msg = err.message.includes('Failed to fetch')
+        ? 'Cannot reach the backend. Is uvicorn running on ' + getBaseUrl() + '?'
+        : err.message;
+      showToast('⚠ ' + msg);
+      appendErrorBubble(msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ================================================================
+     UI helpers
+  ================================================================ */
+  function setLoading(state) {
+    isLoading = state;
+    sendBtn.disabled = state || inputEl.value.trim() === '';
+    statusText.textContent = state ? 'Thinking…' : 'Online · AI Product Helper';
+  }
+
+  function formatTime() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* Append a sent or received bubble */
+  function appendBubble(side, text, toolCallsMade, toolResults) {
+    const row = document.createElement('div');
+    row.className = `msg-row ${side}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    // Render text with line-break support
+    bubble.appendChild(renderText(text));
+
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = formatTime() + (side === 'recv' ? ' · AI' : '');
+    bubble.appendChild(meta);
+
+    row.appendChild(bubble);
+
+    // Lookup details panel (only for AI replies that used a tool)
+    if (side === 'recv' && toolCallsMade && toolCallsMade.length > 0) {
+      const detailsWrap = document.createElement('div');
+      detailsWrap.className = 'details-wrap';
+      detailsWrap.appendChild(buildDetailsPanel(toolCallsMade, toolResults));
+      row.appendChild(detailsWrap);
+    }
+
+    messagesEl.appendChild(row);
+    scrollToBottom();
+    return row;
+  }
+
+  /* Error bubble (recv style, red text) */
+  function appendErrorBubble(msg) {
+    const row = document.createElement('div');
+    row.className = 'msg-row recv';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.style.cssText = 'background:#fff1f0; border:1px solid #ffccc7;';
+    bubble.innerHTML = `<span style="color:#c62828">⚠ ${escHtml(msg)}</span>`;
+    row.appendChild(bubble);
+    messagesEl.appendChild(row);
+    scrollToBottom();
+  }
+
+  /* Typing indicator */
+  function appendTyping() {
+    const row = document.createElement('div');
+    row.className = 'msg-row recv typing-row';
+    row.innerHTML = `
+      <div class="typing">
+        <span></span><span></span><span></span>
+      </div>`;
+    messagesEl.appendChild(row);
+    scrollToBottom();
+    return row;
+  }
+
+  /* ================================================================
+     Inventory details panel builder
+  ================================================================ */
+  function buildDetailsPanel(toolCallsMade, toolResults) {
+    const det = document.createElement('details');
+
+    const sum = document.createElement('summary');
+    sum.textContent = `Inventory Lookup Details (${toolCallsMade.length} call${toolCallsMade.length > 1 ? 's' : ''})`;
+    det.appendChild(sum);
+
+    const body = document.createElement('div');
+    body.className = 'details-body';
+
+    /* --- Tool calls section --- */
+    const callsSection = document.createElement('div');
+    callsSection.className = 'details-section';
+    const callsH = document.createElement('h4');
+    callsH.textContent = 'Lookups Requested';
+    callsSection.appendChild(callsH);
+
+    toolCallsMade.forEach(tc => {
+      const pill = document.createElement('div');
+      pill.className = 'tool-call';
+      const args = tc.arguments || {};
+      const argStr = Object.entries(args)
+        .map(([k, v]) => `${k}: <span>"${escHtml(String(v))}"</span>`)
+        .join('  ');
+      pill.innerHTML = `🔍 ${escHtml(tc.tool)}( ${argStr} )`;
+      callsSection.appendChild(pill);
+    });
+
+    body.appendChild(callsSection);
+
+    /* --- Tool results section --- */
+    const resultsSection = document.createElement('div');
+    resultsSection.className = 'details-section';
+    const resultsH = document.createElement('h4');
+    resultsH.textContent = 'Inventory Data Returned';
+    resultsSection.appendChild(resultsH);
+
+    (toolResults || []).forEach(tr => {
+      const result = tr.result;
+
+      if (!result || (Array.isArray(result) && result.length === 0)) {
+        const none = document.createElement('div');
+        none.className = 'no-results';
+        none.textContent = 'No matching products found in inventory.';
+        resultsSection.appendChild(none);
+        return;
+      }
+
+      // Array of product rows
+      if (Array.isArray(result)) {
+        result.forEach(row => resultsSection.appendChild(buildProductCard(row)));
+        return;
+      }
+
+      // Error or unexpected shape — show raw JSON
+      const raw = document.createElement('pre');
+      raw.className = 'raw-json';
+      raw.textContent = JSON.stringify(result, null, 2);
+      resultsSection.appendChild(raw);
+    });
+
+    body.appendChild(resultsSection);
+    det.appendChild(body);
+    return det;
+  }
+
+  /* Product card for one inventory row */
+  function buildProductCard(row) {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = row.product_name || '—';
+    card.appendChild(name);
+
+    if (row.size || row.price_inr !== undefined) {
+      const size = document.createElement('div');
+      size.className = 'size';
+      size.textContent = row.size ? `Size: ${row.size}` : '';
+      card.appendChild(size);
+
+      const price = document.createElement('div');
+      price.className = 'price';
+      price.textContent = row.price_inr !== undefined ? `₹${row.price_inr}` : '';
+      card.appendChild(price);
+    }
+
+    if (row.in_stock !== undefined && row.in_stock !== null) {
+      const emptyCell = document.createElement('div');
+      card.appendChild(emptyCell);
+
+      const stock = document.createElement('div');
+      const inStock = row.in_stock === true || row.in_stock === 'true' || row.in_stock === 1;
+      stock.className = inStock ? 'stock-yes' : 'stock-no';
+      stock.textContent = inStock ? '✓ In Stock' : '✗ Out of Stock';
+      card.appendChild(stock);
+    }
+
+    if (row.description) {
+      const desc = document.createElement('div');
+      desc.className = 'desc';
+      desc.textContent = row.description;
+      card.appendChild(desc);
+    }
+
+    return card;
+  }
+
+  /* ================================================================
+     Utilities
+  ================================================================ */
+  function renderText(text) {
+    // Preserve newlines in AI replies
+    const frag = document.createDocumentFragment();
+    text.split('\n').forEach((line, i, arr) => {
+      frag.appendChild(document.createTextNode(line));
+      if (i < arr.length - 1) frag.appendChild(document.createElement('br'));
+    });
+    return frag;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  let toastTimer;
+  function showToast(msg, bg = '#c62828') {
+    errorToast.textContent = msg;
+    errorToast.style.background = bg;
+    errorToast.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { errorToast.style.display = 'none'; }, 4000);
+  }
+</script>
+</body>
+</html>
