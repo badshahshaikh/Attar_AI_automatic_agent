@@ -29,6 +29,13 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Timeout (seconds) for Google Sheets HTTP calls. Prevents a stalled inventory
+# request from hanging a worker thread indefinitely.
+try:
+    GOOGLE_HTTP_TIMEOUT = float(os.getenv("GOOGLE_HTTP_TIMEOUT", "30"))
+except (TypeError, ValueError):
+    GOOGLE_HTTP_TIMEOUT = 30.0
+
 # ---------------------------------------------------------------------------
 # Google Sheets client (lazy-init so import never crashes on missing creds)
 # ---------------------------------------------------------------------------
@@ -72,8 +79,23 @@ def _build_sheets_service():
 
     scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    service = build("sheets", "v4", credentials=creds, cache_discovery=False)
-    return service
+
+    # Prefer a client with a finite HTTP timeout so a stalled call cannot hang.
+    # Fall back to the standard client if the timeout wiring is unavailable.
+    try:
+        import httplib2
+        from google_auth_httplib2 import AuthorizedHttp
+
+        authed_http = AuthorizedHttp(
+            creds, http=httplib2.Http(timeout=GOOGLE_HTTP_TIMEOUT)
+        )
+        return build("sheets", "v4", http=authed_http, cache_discovery=False)
+    except Exception:
+        logger.warning(
+            "Sheets timeout wiring unavailable; using default client "
+            "(GOOGLE_HTTP_TIMEOUT not applied)"
+        )
+        return build("sheets", "v4", credentials=creds, cache_discovery=False)
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +201,7 @@ def lookup_product(product_name: str, size: str | None = None) -> str:
         # Optional size filter — match against size_ml column
         if size:
             size_lower = size.strip().lower().replace("ml", "").strip()
-            size_val   = str(row.get("size_ml", "")).lower().replace("ml", "").strip()
+            size_val = str(row.get("size_ml") if row.get("size_ml") is not None else row.get("size", "")).lower().replace("ml", "").strip()
             if size_lower not in size_val:
                 continue
 

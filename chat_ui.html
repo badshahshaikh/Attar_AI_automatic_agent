@@ -42,13 +42,13 @@
     /* ── App shell ──────────────────────────────────────────────────── */
     #app {
       width: 100%;
-      max-width: 480px;
+      max-width: 960px;
       height: 100dvh;
-      max-height: 900px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
       background: var(--bg-app);
-      border-radius: 4px;
+      border-radius: 0;
       overflow: hidden;
       box-shadow: 0 4px 24px rgba(0,0,0,.5);
     }
@@ -132,10 +132,11 @@
     #messages {
       flex: 1;
       overflow-y: auto;
-      padding: 12px 10px;
+      overscroll-behavior: contain;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
       scroll-behavior: smooth;
     }
 
@@ -155,11 +156,12 @@
     .msg-row.recv  { align-self: flex-start; align-items: flex-start; }
 
     .bubble {
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: var(--radius);
       font-size: 14px;
       line-height: 1.5;
       word-break: break-word;
+      overflow-wrap: anywhere;
       box-shadow: var(--shadow);
       position: relative;
     }
@@ -236,22 +238,56 @@
     .tool-call span { color: #555; font-weight: 400; }
 
     /* Product result cards */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
     .product-card {
       background: #fff;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 2px 8px;
-      font-size: 12px;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      box-shadow: var(--shadow);
     }
-    .product-card .name { font-weight: 600; color: #111; grid-column: 1/-1; }
-    .product-card .size { color: var(--text-meta); }
-    .product-card .price { font-weight: 600; color: #333; }
-    .product-card .stock-yes { color: #2e7d32; font-weight: 500; }
-    .product-card .stock-no  { color: #c62828; font-weight: 500; }
-    .product-card .desc { color: #555; font-size: 11px; grid-column: 1/-1; margin-top: 2px; }
+    .product-card .img-placeholder {
+      width: 100%;
+      height: 90px;
+      background: linear-gradient(135deg,#f5efe6,#efe2d2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      color: #a98a6a;
+    }
+    .product-card .name { font-weight: 600; color: #111; font-size: 14px; }
+    .product-card .price { font-weight: 600; color: #2e7d32; font-size: 15px; }
+    .product-card .size { color: var(--text-meta); font-size: 12px; }
+    .product-card .desc { color: #555; font-size: 12px; line-height: 1.4; }
+    .product-card .reason {
+      font-size: 11px; color: var(--accent); font-style: italic;
+      border-left: 2px solid var(--accent); padding-left: 6px;
+    }
+    .badge {
+      display: inline-block; font-size: 10px; font-weight: 600;
+      padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: .03em;
+    }
+    .badge.verified   { background: #e8f5e9; color: #2e7d32; }
+    .badge.unverified { background: #fff3e0; color: #e65100; }
+    .badge.out-of-stock { background: #ffebee; color: #c62828; }
+    .badge.not-found  { background: #f3e5f5; color: #6a1b9a; }
+    .product-card .actions { margin-top: 4px; display: flex; gap: 6px; }
+    .product-card .actions button {
+      flex: 1; font-size: 11px; font-weight: 500;
+      padding: 6px 8px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--accent); background: #fff; color: var(--accent);
+      transition: background .15s, color .15s;
+    }
+    .product-card .actions button:hover { background: var(--accent); color: #fff; }
 
     .no-results { color: var(--text-meta); font-style: italic; padding: 2px 0; }
 
@@ -315,10 +351,10 @@
     /* ── Input bar ───────────────────────────────────────────────────── */
     #input-bar {
       background: var(--bg-input);
-      padding: 8px 10px;
+      padding: 10px 16px;
       display: flex;
       align-items: flex-end;
-      gap: 8px;
+      gap: 10px;
       flex-shrink: 0;
       border-top: 1px solid var(--border);
     }
@@ -403,10 +439,26 @@
     #messages::-webkit-scrollbar-thumb { background: #bbb; border-radius: 2px; }
 
     /* ── Full-height on small screens ────────────────────────────────── */
-    @media (max-width: 500px) {
+    @media (max-width: 640px) {
       html, body { background: var(--bg-app); }
-      #app { max-height: none; border-radius: 0; box-shadow: none; }
+      #app { max-width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; }
+      #messages { padding: 12px; }
+      .msg-row { max-width: 88%; }
+      .product-grid { grid-template-columns: 1fr; }
+      #input-bar { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+      .bubble { font-size: 13px; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+
+    /* Focus indicators */
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   </style>
 </head>
 <body>
@@ -421,6 +473,7 @@
       <p id="status-text">Online · AI Product Helper</p>
     </div>
     <button id="btn-new-chat" title="Start a new conversation">New Chat</button>
+    <button id="btn-clear-chat" title="Clear current conversation" aria-label="Clear chat">Clear</button>
   </header>
 
   <!-- ── Config bar ──────────────────────────────────────────────── -->
@@ -442,6 +495,8 @@
         <button class="suggestion-btn">Rose attar ka price kya hai?</button>
         <button class="suggestion-btn">Kya Musk Tahara available hai?</button>
         <button class="suggestion-btn">Tell me about Black Oud</button>
+        <button class="suggestion-btn">Suggest a strong oud under 500</button>
+        <button class="suggestion-btn">Daily wear attar</button>
       </div>
     </div>
   </div>
@@ -465,24 +520,75 @@
 <div id="error-toast" role="alert"></div>
 
 <script>
-  /* ================================================================
+/* ================================================================
      State
-  ================================================================ */
-  let conversationHistory = [];   // updated_history from backend
-  let isLoading = false;
+   ================================================================ */
+   let conversationHistory = [];   // updated_history from backend
+   let isLoading = false;
+   let isSending = false;
+   let sendTimer = null;
 
-  /* ================================================================
-     DOM refs
-  ================================================================ */
-  const messagesEl   = document.getElementById('messages');
-  const inputEl      = document.getElementById('message-input');
-  const sendBtn      = document.getElementById('btn-send');
-  const newChatBtn   = document.getElementById('btn-new-chat');
-  const errorToast   = document.getElementById('error-toast');
-  const apiUrlInput  = document.getElementById('api-url-input');
-  const saveUrlBtn   = document.getElementById('btn-save-url');
-  const emptyState   = document.getElementById('empty-state');
-  const statusText   = document.getElementById('status-text');
+   /* ================================================================
+      DOM refs
+   ================================================================ */
+   const messagesEl   = document.getElementById('messages');
+   const inputEl      = document.getElementById('message-input');
+   const sendBtn      = document.getElementById('btn-send');
+   const newChatBtn   = document.getElementById('btn-new-chat');
+   const clearChatBtn = document.getElementById('btn-clear-chat');
+   const errorToast   = document.getElementById('error-toast');
+   const apiUrlInput  = document.getElementById('api-url-input');
+   const saveUrlBtn   = document.getElementById('btn-save-url');
+   const emptyState   = document.getElementById('empty-state');
+   const statusText   = document.getElementById('status-text');
+
+   /* ================================================================
+      Persistence (sessionStorage) — MVP
+   ================================================================ */
+   const SESSION_KEY = 'msf_session';
+   const SESSION_TTL = 30 * 60 * 1000; // 30 min idle expiry
+   const MAX_RESTORED_HISTORY = 50;    // cap restored messages to avoid unbounded growth
+
+   function saveSession() {
+     try {
+       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+         history: conversationHistory,
+         savedAt: Date.now(),
+       }));
+     } catch {}
+   }
+
+   function restoreSession() {
+     try {
+       const raw = sessionStorage.getItem(SESSION_KEY);
+       if (!raw) return;
+       const data = JSON.parse(raw);
+       if (Date.now() - data.savedAt > SESSION_TTL) {
+         sessionStorage.removeItem(SESSION_KEY);
+         return;
+       }
+        conversationHistory = (data.history || []).slice(-MAX_RESTORED_HISTORY);
+        if (conversationHistory.length) {
+         emptyState.style.display = 'none';
+         renderHistory();
+       }
+     } catch {}
+   }
+
+   function clearSession() {
+     try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+   }
+
+   function renderHistory() {
+     messagesEl.innerHTML = '';
+     conversationHistory.forEach(h => {
+       if (h.role === 'user') {
+         appendBubble('sent', h.content);
+       } else if (h.role === 'assistant') {
+         appendBubble('recv', h.content, h.tool_calls_made, h.tool_results);
+       }
+     });
+   }
 
   /* ================================================================
      Config — backend URL
@@ -526,82 +632,110 @@
     });
   });
 
-  /* ================================================================
-     New Chat
-  ================================================================ */
-  newChatBtn.addEventListener('click', () => {
-    if (isLoading) return;
-    conversationHistory = [];
-    messagesEl.innerHTML = '';
-    messagesEl.appendChild(emptyState);
-    emptyState.style.display = 'flex';
-    inputEl.value = '';
-    inputEl.style.height = 'auto';
-    sendBtn.disabled = true;
-  });
+/* ================================================================
+      New Chat / Clear Chat
+   ================================================================ */
+   function resetChat() {
+     if (isLoading || isSending) return;
+     conversationHistory = [];
+     clearSession();
+     messagesEl.innerHTML = '';
+     messagesEl.appendChild(emptyState);
+     emptyState.style.display = 'flex';
+     inputEl.value = '';
+     inputEl.style.height = 'auto';
+     sendBtn.disabled = true;
+   }
 
-  /* ================================================================
-     Send button
-  ================================================================ */
-  sendBtn.addEventListener('click', sendMessage);
+   newChatBtn.addEventListener('click', resetChat);
+   clearChatBtn.addEventListener('click', resetChat);
 
-  /* ================================================================
-     Core: send a message
-  ================================================================ */
-  async function sendMessage() {
-    const text = inputEl.value.trim();
-    if (!text || isLoading) return;
+   /* ================================================================
+      Send button
+   ================================================================ */
+   sendBtn.addEventListener('click', sendMessage);
 
-    // Hide empty state
-    emptyState.style.display = 'none';
+   /* ================================================================
+      Core: send a message
+   ================================================================ */
+   async function sendMessage() {
+     const text = inputEl.value.trim();
+     if (!text || isLoading || isSending) return;
 
-    // Append user bubble
-    appendBubble('sent', text);
+     isSending = true;
+     sendBtn.disabled = true;
 
-    // Clear input
-    inputEl.value = '';
-    inputEl.style.height = 'auto';
-    setLoading(true);
+     // Hide empty state
+     emptyState.style.display = 'none';
 
-    // Show typing indicator
-    const typingEl = appendTyping();
+     // Append user bubble
+     appendBubble('sent', text);
 
-    try {
-      const response = await fetch(`${getBaseUrl()}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: conversationHistory,
-        }),
-      });
+     // Clear input
+     inputEl.value = '';
+     inputEl.style.height = 'auto';
+     setLoading(true);
 
-      if (!response.ok) {
-        let detail = `HTTP ${response.status}`;
-        try { const err = await response.json(); detail = err.detail || detail; } catch {}
-        throw new Error(detail);
-      }
+     // Show typing indicator
+     const typingEl = appendTyping();
 
-      const data = await response.json();
+     try {
+       const response = await fetch(`${getBaseUrl()}/chat`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           message: text,
+           history: conversationHistory,
+         }),
+       });
 
-      // Save updated history for the next call
-      conversationHistory = data.updated_history || [];
+       if (!response.ok) {
+         let detail = `HTTP ${response.status}`;
+         try { const err = await response.json(); detail = err.detail || detail; } catch {}
+         throw new Error(detail);
+       }
 
-      // Remove typing indicator and show reply
-      typingEl.remove();
-      appendBubble('recv', data.reply, data.tool_calls_made, data.tool_results);
+       const data = await response.json();
 
-    } catch (err) {
-      typingEl.remove();
-      const msg = err.message.includes('Failed to fetch')
-        ? 'Cannot reach the backend. Is uvicorn running on ' + getBaseUrl() + '?'
-        : err.message;
-      showToast('⚠ ' + msg);
-      appendErrorBubble(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
+       // Save updated history for the next call
+       conversationHistory = data.updated_history || [];
+       saveSession();
+
+       // Remove typing indicator and show reply
+       typingEl.remove();
+       appendBubble('recv', data.reply, data.tool_calls_made, data.tool_results);
+
+     } catch (err) {
+       typingEl.remove();
+       const friendly = friendlyError(err);
+       showToast('⚠ ' + friendly);
+       appendErrorBubble(friendly);
+     } finally {
+       setLoading(false);
+       isSending = false;
+       sendBtn.disabled = inputEl.value.trim() === '';
+     }
+   }
+
+   function friendlyError(err) {
+     const msg = err.message || String(err);
+     if (msg.includes('Failed to fetch')) {
+       return 'Cannot reach the backend. Is the server running?';
+     }
+     if (msg.includes('timeout') || msg.includes('timed out')) {
+       return 'The request took too long. Please try again.';
+     }
+     if (/40[0-9]/.test(msg) || /50[0-9]/.test(msg)) {
+       return 'The server returned an error. Please try again later.';
+     }
+     if (msg.toLowerCase().includes('no recommendations') || msg.toLowerCase().includes('not found')) {
+       return 'No matching products found. Try a different name or size.';
+     }
+     if (msg.toLowerCase().includes('inventory') || msg.toLowerCase().includes('out of stock') || msg.toLowerCase().includes('unavailable')) {
+       return 'That item is currently unavailable. Try another product.';
+     }
+     return 'Something went wrong. Please try again.';
+   }
 
   /* ================================================================
      UI helpers
@@ -633,6 +767,15 @@
     bubble.appendChild(meta);
 
     row.appendChild(bubble);
+
+    // Render recommendation cards inline when the agent used recommend_products
+    if (side === 'recv' && toolResults) {
+      const recToolResult = toolResults.find(tr => tr && tr.result && Array.isArray(tr.result.products));
+      if (recToolResult) {
+        const grid = buildRecommendationGrid(recToolResult.result);
+        if (grid) row.appendChild(grid);
+      }
+    }
 
     // Lookup details panel (only for AI replies that used a tool)
     if (side === 'recv' && toolCallsMade && toolCallsMade.length > 0) {
@@ -724,6 +867,20 @@
         return;
       }
 
+      // Recommendation result — render as cards
+      if (result && Array.isArray(result.products)) {
+        if (result.products.length === 0) {
+          const none = document.createElement('div');
+          none.className = 'no-results';
+          none.textContent = 'No suitable products found for the given preferences.';
+          resultsSection.appendChild(none);
+          return;
+        }
+        const grid = buildRecommendationGrid(result);
+        if (grid) resultsSection.appendChild(grid);
+        return;
+      }
+
       // Array of product rows
       if (Array.isArray(result)) {
         result.forEach(row => resultsSection.appendChild(buildProductCard(row)));
@@ -786,6 +943,91 @@
   }
 
   /* ================================================================
+     Recommendation cards grid
+  ================================================================ */
+  function buildRecommendationGrid(result) {
+    const products = (result && Array.isArray(result.products)) ? result.products : [];
+    if (products.length === 0) return null;
+
+    const grid = document.createElement('div');
+    grid.className = 'product-grid';
+
+    products.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+
+      // Image placeholder
+      const img = document.createElement('div');
+      img.className = 'img-placeholder';
+      img.textContent = '🧴';
+      card.appendChild(img);
+
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = p.product_name || '—';
+      card.appendChild(name);
+
+      const price = document.createElement('div');
+      price.className = 'price';
+      const priceVal = (p.price !== null && p.price !== undefined) ? `₹${p.price}` : '';
+      price.textContent = priceVal;
+      card.appendChild(price);
+
+      if (p.size) {
+        const size = document.createElement('div');
+        size.className = 'size';
+        size.textContent = `Size: ${p.size}`;
+        card.appendChild(size);
+      }
+
+      // Verification badge
+      const status = (p.verification_status || (p.verification && p.verification.status) || '').toLowerCase();
+      let badgeClass = 'unverified';
+      let badgeText = 'Unverified';
+      if (status === 'verified') { badgeClass = 'verified'; badgeText = 'Verified'; }
+      else if (status === 'out_of_stock') { badgeClass = 'out-of-stock'; badgeText = 'Out of stock'; }
+      else if (status === 'not_found') { badgeClass = 'not-found'; badgeText = 'Not found'; }
+      else if (status === 'price_changed') { badgeClass = 'unverified'; badgeText = 'Price updated'; }
+      else if (status === 'ambiguous_match') { badgeClass = 'not-found'; badgeText = 'Ambiguous'; }
+      else if (status === 'verification_failed') { badgeClass = 'not-found'; badgeText = 'Unverified'; }
+      const badge = document.createElement('span');
+      badge.className = `badge ${badgeClass}`;
+      badge.textContent = badgeText;
+      card.appendChild(badge);
+
+      if (p.reason) {
+        const reason = document.createElement('div');
+        reason.className = 'reason';
+        reason.textContent = p.reason;
+        card.appendChild(reason);
+      }
+
+      if (p.matched_attributes && p.matched_attributes.length) {
+        const attrs = document.createElement('div');
+        attrs.className = 'size';
+        attrs.textContent = `Matches: ${p.matched_attributes.join(', ')}`;
+        card.appendChild(attrs);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      const askBtn = document.createElement('button');
+      askBtn.textContent = 'Ask about this attar';
+      askBtn.addEventListener('click', () => {
+        inputEl.value = `Tell me more about ${p.product_name}`;
+        inputEl.dispatchEvent(new Event('input'));
+        sendMessage();
+      });
+      actions.appendChild(askBtn);
+      card.appendChild(actions);
+
+      grid.appendChild(card);
+    });
+
+    return grid;
+  }
+
+  /* ================================================================
      Utilities
   ================================================================ */
   function renderText(text) {
@@ -802,6 +1044,32 @@
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* ================================================================
+     Image URL allowlist — untrusted product image URLs must be HTTPS
+     and hosted on a trusted domain. Returns a safe URL or null.
+     Product images are placeholders today, but any future image
+     rendering must pass through this helper.
+  ================================================================ */
+  const TRUSTED_IMAGE_HOSTS = new Set([
+    'localhost',
+    '127.0.0.1',
+    'msfragrances.com',
+    'www.msfragrances.com',
+  ]);
+
+  function safeImageUrl(rawUrl) {
+    if (!rawUrl || typeof rawUrl !== 'string') return null;
+    let parsed;
+    try {
+      parsed = new URL(rawUrl, window.location.origin);
+    } catch {
+      return null;
+    }
+    if (parsed.protocol !== 'https:') return null;
+    if (!TRUSTED_IMAGE_HOSTS.has(parsed.hostname)) return null;
+    return parsed.href;
+  }
+
   function scrollToBottom() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -814,6 +1082,9 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { errorToast.style.display = 'none'; }, 4000);
   }
+
+  // Restore persisted session (if any) on load
+  restoreSession();
 </script>
 </body>
 </html>
