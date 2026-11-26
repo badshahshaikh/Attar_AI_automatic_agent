@@ -61,7 +61,7 @@ ALLOWED_ORIGINS = [
     o.strip()
     for o in os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:8000,http://127.0.0.1:8000",
+        "http://localhost:8000,http://127.0.0.1:8000,https://attar-ai-automatic-agent-1.onrender.com",
     ).split(",")
     if o.strip()
 ] or ["*"]

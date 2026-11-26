@@ -593,8 +593,11 @@
   /* ================================================================
      Config — backend URL
   ================================================================ */
-  const STORAGE_KEY_URL = 'msf_backend_url';
-  apiUrlInput.value = localStorage.getItem(STORAGE_KEY_URL) || 'http://localhost:8000';
+   const STORAGE_KEY_URL = 'msf_backend_url';
+   const DEFAULT_BACKEND_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+     ? 'http://localhost:8000'
+     : 'https://attar-ai-automatic-agent-1.onrender.com';
+   apiUrlInput.value = localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_BACKEND_URL;
 
   function getBaseUrl() {
     return apiUrlInput.value.replace(/\/$/, '');
