@@ -372,6 +372,34 @@
       gap: 10px;
       flex-shrink: 0;
       border-top: 1px solid var(--border);
+/* ── Input bar ───────────────────────────────────────────────────── */
+#input-bar {
+  background: var(--bg-input);
+  padding: 10px 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Keyboard-open state — move input above the visible keyboard on mobile */
+@media (max-width: 480px) {
+  .keyboard-open #input-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--bg-input);
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  
+  .keyboard-open #messages {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
     }
 
     #message-input {
@@ -638,6 +666,25 @@
       e.preventDefault();
       if (!sendBtn.disabled) sendMessage();
     }
+/* ================================================================
+      Keyboard-aware chat input for mobile
+   ================================================================ */
+  function isMobile() {
+    return window.innerWidth < 768 ||
+      /Mobi|Android|iPhone|iPad/.test(navigator.userAgent);
+  }
+
+  inputEl.addEventListener('focus', () => {
+    if (isMobile()) {
+      document.body.classList.add('keyboard-open');
+    }
+  });
+
+  inputEl.addEventListener('blur', () => {
+    if (isMobile()) {
+      document.body.classList.remove('keyboard-open');
+    }
+  });
   });
 
   /* ================================================================

@@ -66,6 +66,86 @@ html, body { overflow-x: hidden; }
   .header-info p { display: none; }
   #btn-new-chat, #btn-clear-chat { padding: 4px 7px; }
 }
+/* Extra-narrow mobile (≤ 320px) */
+@media (max-width: 320px) {
+  #messages { padding: 8px; gap: 4px; }
+  .msg-row { max-width: 96%; }
+
+  .bubble { font-size: 13px; padding: 8px 10px; }
+
+  header { padding: 6px 8px; gap: 6px; }
+  .avatar { width: 32px; height: 32px; font-size: 16px; }
+  .header-info h1 { font-size: 14px; }
+
+  #btn-new-chat, #btn-clear-chat { font-size: 10px; padding: 3px 6px; }
+
+  #config-bar { gap: 4px; padding: 4px 8px; }
+  #config-bar label { font-size: 10px; }
+
+  #input-bar { padding: 6px 8px; gap: 6px; }
+  #message-input { font-size: 14px; padding: 8px 12px; }
+
+  .product-grid { grid-template-columns: 1fr; }
+  .product-card .img-placeholder { height: 100px; }
+
+  .suggestion-btn { font-size: 12px; padding: 7px 10px; }
+
+  #error-toast { bottom: 72px; font-size: 11px; }
+}
+
+/* Compact mobile (≤ 375px) - common iPhone SE / mini size */
+@media (max-width: 375px) {
+  #messages { padding: 10px; gap: 5px; }
+  .msg-row { max-width: 94%; }
+
+  .bubble { font-size: 13px; padding: 8px 11px; }
+
+  header { padding: 7px 10px; gap: 7px; }
+  .avatar { width: 34px; height: 34px; font-size: 17px; }
+  .header-info h1 { font-size: 14px; }
+
+  #btn-new-chat, #btn-clear-chat { font-size: 10px; padding: 3px 8px; }
+
+  #config-bar { gap: 5px; padding: 5px 9px; }
+  #api-url-input { font-size: 11px; padding: 3px 6px; }
+
+  #input-bar { padding: 7px 9px; gap: 7px; }
+  #message-input { font-size: 15px; padding: 9px 13px; }
+
+  .product-grid { grid-template-columns: 1fr; }
+  .product-card .img-placeholder { height: 110px; }
+
+  .suggestion-btn { font-size: 12px; padding: 8px 12px; }
+
+  #error-toast { bottom: 76px; font-size: 11px; }
+}
+
+/* Narrow mobile (≤ 390px) - common small Android phones */
+@media (max-width: 390px) {
+  #messages { padding: 11px; gap: 5px; }
+  .msg-row { max-width: 93%; }
+
+  .bubble { font-size: 13px; padding: 8px 12px; }
+
+  header { padding: 7px 11px; gap: 7px; }
+  .avatar { width: 35px; height: 35px; font-size: 17px; }
+  .header-info h1 { font-size: 14px; }
+
+  #btn-new-chat, #btn-clear-chat { font-size: 10px; padding: 3px 8px; }
+
+  #config-bar { gap: 5px; padding: 5px 9px; }
+  #api-url-input { font-size: 11px; padding: 3px 6px; }
+
+  #input-bar { padding: 7px 10px; gap: 7px; }
+  #message-input { font-size: 15px; padding: 9px 13px; }
+
+  .product-grid { grid-template-columns: 1fr; }
+  .product-card .img-placeholder { height: 110px; }
+
+  .suggestion-btn { font-size: 12px; padding: 8px 12px; }
+
+  #error-toast { bottom: 78px; font-size: 11px; }
+}
 
 /* ── Tablet (481px – 768px) ─────────────────────────────────────── */
 @media (min-width: 481px) and (max-width: 768px) {
