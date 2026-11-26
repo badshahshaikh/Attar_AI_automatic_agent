@@ -306,9 +306,54 @@ def _handle_recommend_products(args: dict) -> str:
         )
 
 
-# ---------------------------------------------------------------------------
-# Agentic loop
-# ---------------------------------------------------------------------------
+def _new_order_session():
+    """Create a new order collection session."""
+    import json
+    session_id = str(json.loads('"0"'))  # simple unique ID
+    _order_sessions[session_id] = {
+        'customer': {},
+        'products': [],  # list of {product_name, size, quantity, price}
+        'step': 'name',
+    }
+    return session_id
+
+
+def _get_order_session():
+    """Get the current order session, or create a new one."""
+    if not _order_sessions:
+        return _new_order_session()
+    # Return the most recent session
+    return list(_order_sessions.keys())[-1]
+
+
+def _check_duplicate_order(session_id, order_id):
+    """Check if an order ID already exists to prevent duplicates."""
+    import json
+    from sheets_lookup import _build_sheets_service
+    import os
+
+    try:
+        service = _build_sheets_service()
+        sheet_id = os.getenv('GOOGLE_SHEET_ID', '').strip()
+        if not sheet_id:
+            return False  # Can't check without sheet ID
+
+        # Read the sheet to check for the order ID
+        # Read first column (order IDs)
+        range_name = f"'{os.getenv('GOOGLE_SHEET_NAME', 'Products')}!'!A:A"
+        result = service.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=range_name
+        ).execute()
+        values = result.get('values', [])
+        if values:
+            for row in values[1:]:  # Skip header
+                if len(row) > 0 and str(row[0]).strip() == str(order_id).strip():
+                    return True
+        return False
+    except Exception:
+        # If we can't check, assume no duplicate (with warning)
+        return False
 
 def chat(
     message: str,
