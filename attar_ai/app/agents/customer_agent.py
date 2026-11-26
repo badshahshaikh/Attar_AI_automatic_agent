@@ -13,7 +13,7 @@ from openai.types.chat import ChatCompletionMessageParam
 from attar_ai.app.agents.agent_state import AgentState
 from attar_ai.app.agents.tool_registry import ToolRegistry
 from attar_ai.app.core.config import settings
-from attar_ai.app.core.exceptions import ProviderError
+from attar_ai.app.core.exceptions import ProviderError, ValidationError
 from attar_ai.app.core.logging import get_logger
 from attar_ai.app.providers.factory import get_provider
 from attar_ai.app.schemas.chat import ObservabilityInfo
@@ -129,7 +129,10 @@ class CustomerAgent:
                         state.force_answer_injected = True
                         create_kwargs["messages"] = state.messages
                 else:
-                    create_kwargs["tools"] = self.tool_registry.get_schemas()
+                    # Get and validate tool schemas before sending to provider
+                    tool_schemas = self.tool_registry.get_schemas()
+                    self._validate_tool_schemas(tool_schemas)
+                    create_kwargs["tools"] = tool_schemas
                     create_kwargs["tool_choice"] = "auto"
 
                 response = self.provider.create_chat_completion(**create_kwargs)
@@ -140,6 +143,8 @@ class CustomerAgent:
                     "content": assistant_message.content or "",
                 }
                 if getattr(assistant_message, "tool_calls", None):
+                    # Validate assistant tool calls have valid function names
+                    self._validate_assistant_tool_calls(assistant_message.tool_calls)
                     assistant_entry["tool_calls"] = [
                         {
                             "id": tc.id,
@@ -330,3 +335,26 @@ class CustomerAgent:
                 serialisable_history.append(entry)
 
         return serialisable_history
+
+    def _validate_tool_schemas(self, schemas: list[dict[str, Any]]) -> None:
+        """Validate tool schemas before sending to provider."""
+        for schema in schemas:
+            if not isinstance(schema, dict):
+                raise ValidationError(f"Tool schema must be a dict, got {type(schema).__name__}", field="schema")
+            if schema.get("type") != "function":
+                raise ValidationError(f"Tool schema type must be 'function', got {schema.get('type')}", field="type")
+            function = schema.get("function")
+            if not isinstance(function, dict):
+                raise ValidationError(f"Tool schema must have 'function' object", field="function")
+            func_name = function.get("name")
+            if not func_name or not isinstance(func_name, str) or not func_name.strip():
+                raise ValidationError(f"Tool function.name must be a non-empty string, got {repr(func_name)}", field="function.name")
+
+    def _validate_assistant_tool_calls(self, tool_calls: list) -> None:
+        """Validate that assistant tool calls have valid function names."""
+        for tc in tool_calls:
+            if not hasattr(tc, "function"):
+                raise ValidationError(f"Tool call missing 'function' attribute", field="function")
+            func_name = getattr(tc.function, "name", None)
+            if not func_name or not isinstance(func_name, str) or not func_name.strip():
+                raise ValidationError(f"Assistant tool call function.name must be a non-empty string, got {repr(func_name)}", field="function.name")
