@@ -1,0 +1,100 @@
+/* ================================================================
+   Responsive overrides for MS Fragrances chat UI
+   Base (desktop) styling lives in chat_ui.html. This file only
+   adjusts layout for tablet / mobile and guards against overflow.
+   ================================================================ */
+
+/* Never allow horizontal scrolling anywhere */
+html, body { overflow-x: hidden; }
+
+/* App shell always fills the viewport width on small screens */
+#app { width: 100%; max-width: 100%; }
+
+/* Message rows: keep bubbles from stretching too wide */
+.msg-row { max-width: 82%; }
+
+/* Product grids collapse gracefully */
+.product-grid { grid-template-columns: repeat(3, 1fr); }
+
+/* Long unbroken strings (URLs, big numbers) must not overflow */
+.bubble, .product-card, .raw-json { overflow-wrap: anywhere; word-break: break-word; }
+.product-card .name,
+.product-card .desc,
+.product-card .reason { overflow-wrap: anywhere; }
+
+/* Touch-friendly interactive elements */
+#btn-send { min-width: 44px; min-height: 44px; }
+.product-card .actions button { min-height: 40px; }
+
+/* Keep the message input above the mobile keyboard */
+#input-bar { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+
+/* ── Small mobile (≤ 480px) ─────────────────────────────────────── */
+@media (max-width: 480px) {
+  #messages { padding: 10px; gap: 6px; }
+  .msg-row { max-width: 92%; }
+
+  .bubble { font-size: 14px; padding: 9px 12px; }
+
+  header { padding: 8px 12px; gap: 8px; }
+  .avatar { width: 36px; height: 36px; font-size: 18px; }
+  .header-info h1 { font-size: 15px; }
+  #btn-new-chat, #btn-clear-chat { font-size: 11px; padding: 4px 9px; }
+
+  /* Config bar stacks so the URL input is fully usable */
+  #config-bar { flex-wrap: wrap; gap: 6px; padding: 6px 10px; }
+  #config-bar label { flex: 0 0 auto; }
+  #api-url-input { flex: 1 1 100%; order: 3; }
+
+  /* Input bar */
+  #input-bar { padding: 8px 10px; gap: 8px; }
+  /* 16px prevents iOS auto-zoom on focus */
+  #message-input { font-size: 16px; padding: 10px 14px; }
+
+  /* Product cards single column, full width */
+  .product-grid { grid-template-columns: 1fr; }
+  .product-card .img-placeholder { height: 120px; }
+
+  /* Suggestions comfortable to tap */
+  .suggestion-btn { font-size: 13px; padding: 9px 14px; }
+
+  #error-toast { bottom: 84px; font-size: 12px; }
+}
+
+/* ── Small mobile in landscape / very narrow (≤ 360px) ──────────── */
+@media (max-width: 360px) {
+  .header-info p { display: none; }
+  #btn-new-chat, #btn-clear-chat { padding: 4px 7px; }
+}
+
+/* ── Tablet (481px – 768px) ─────────────────────────────────────── */
+@media (min-width: 481px) and (max-width: 768px) {
+  #messages { padding: 14px; }
+  .msg-row { max-width: 78%; }
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
+  #config-bar { flex-wrap: wrap; }
+}
+
+/* ── Laptop (769px – 1024px) ────────────────────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #messages { padding: 18px; }
+  .msg-row { max-width: 72%; }
+}
+
+/* ── Desktop (≥ 1025px) ─────────────────────────────────────────── */
+@media (min-width: 1025px) {
+  #messages { padding: 20px 24px; }
+  .msg-row { max-width: 70%; }
+}
+
+/* ── Short viewports (landscape phones) ─────────────────────────── */
+@media (max-height: 500px) {
+  .avatar { width: 32px; height: 32px; font-size: 16px; }
+  header { padding: 6px 12px; }
+  #config-bar { padding: 4px 10px; }
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
