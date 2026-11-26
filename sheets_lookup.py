@@ -36,6 +36,9 @@ try:
 except (TypeError, ValueError):
     GOOGLE_HTTP_TIMEOUT = 30.0
 
+# Maximum retries for transient Google Sheets failures (timeouts, 5xx).
+GOOGLE_SHEETS_MAX_RETRIES = int(os.getenv("GOOGLE_SHEETS_MAX_RETRIES", "3"))
+GOOGLE_SHEETS_BACKOFF_BASE = float(os.getenv("GOOGLE_SHEETS_BACKOFF_BASE", "1.5"))
 # ---------------------------------------------------------------------------
 # Google Sheets client (lazy-init so import never crashes on missing creds)
 # ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 """
 ai_agent.py
 -----------
-Manages the conversation with OpenAI. Handles:
+Manages the conversation with the LLM provider. Handles:
   - Loading the system prompt (re-read on every request — edits take effect immediately)
   - Running the agentic tool-calling loop
   - Calling the live Google Sheets inventory tool
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # LLM provider selection (mirrors ms_fragrance_backend's PRODUCT_TEXT_PROVIDER)
 # ---------------------------------------------------------------------------
-# LLM_PROVIDER: "openai" (default) or "cloudflare".
+# LLM_PROVIDER: "openai", "cloudflare", or "groq".
 # Cloudflare Workers AI is used via its OpenAI-compatible endpoint so the
 # existing tool-calling (function calling) loop keeps working unchanged.
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "cloudflare").strip().lower()
@@ -61,6 +61,17 @@ try:
 except (TypeError, ValueError):
     CLOUDFLARE_TIMEOUT = 60.0
 
+# ---------------------------------------------------------------------------
+# Groq settings (used when LLM_PROVIDER == "groq")
+# ---------------------------------------------------------------------------
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b").strip()
+GROQ_TIMEOUT = 30.0
+try:
+    GROQ_TIMEOUT = float(os.getenv("GROQ_TIMEOUT", "30"))
+except (TypeError, ValueError):
+    GROQ_TIMEOUT = 30.0
+
 # Resolve the active model name and build the (OpenAI-compatible) client.
 if LLM_PROVIDER == "cloudflare":
     if not CLOUDFLARE_ACCOUNT_ID or not CLOUDFLARE_API_TOKEN:
@@ -76,6 +87,17 @@ if LLM_PROVIDER == "cloudflare":
             f"{CLOUDFLARE_ACCOUNT_ID}/ai/v1"
         ),
         timeout=CLOUDFLARE_TIMEOUT,
+    )
+elif LLM_PROVIDER == "groq":
+    if not GROQ_API_KEY:
+        raise RuntimeError(
+            "LLM_PROVIDER=groq requires GROQ_API_KEY in .env."
+        )
+    OPENAI_MODEL = GROQ_MODEL
+    _client = OpenAI(
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+        timeout=GROQ_TIMEOUT,
     )
 else:
     _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=OPENAI_TIMEOUT)
@@ -306,54 +328,54 @@ def _handle_recommend_products(args: dict) -> str:
         )
 
 
-def _new_order_session():
-    """Create a new order collection session."""
-    import json
-    session_id = str(json.loads('"0"'))  # simple unique ID
-    _order_sessions[session_id] = {
-        'customer': {},
-        'products': [],  # list of {product_name, size, quantity, price}
-        'step': 'name',
-    }
-    return session_id
+# def _new_order_session():
+#     """Create a new order collection session."""
+#     import json
+#     session_id = str(json.loads('"0"'))  # simple unique ID
+#     _order_sessions[session_id] = {
+#         'customer': {},
+#         'products': [],  # list of {product_name, size, quantity, price}
+#         'step': 'name',
+#     }
+#     return session_id
 
 
-def _get_order_session():
-    """Get the current order session, or create a new one."""
-    if not _order_sessions:
-        return _new_order_session()
-    # Return the most recent session
-    return list(_order_sessions.keys())[-1]
+# def _get_order_session():
+#     """Get the current order session, or create a new one."""
+#     if not _order_sessions:
+#         return _new_order_session()
+#     # Return the most recent session
+#     return list(_order_sessions.keys())[-1]
 
 
-def _check_duplicate_order(session_id, order_id):
-    """Check if an order ID already exists to prevent duplicates."""
-    import json
-    from sheets_lookup import _build_sheets_service
-    import os
+# def _check_duplicate_order(session_id, order_id):
+#     """Check if an order ID already exists to prevent duplicates."""
+#     import json
+#     from sheets_lookup import _build_sheets_service
+#     import os
 
-    try:
-        service = _build_sheets_service()
-        sheet_id = os.getenv('GOOGLE_SHEET_ID', '').strip()
-        if not sheet_id:
-            return False  # Can't check without sheet ID
+#     try:
+#         service = _build_sheets_service()
+#         sheet_id = os.getenv('GOOGLE_SHEET_ID', '').strip()
+#         if not sheet_id:
+#             return False  # Can't check without sheet ID
 
-        # Read the sheet to check for the order ID
-        # Read first column (order IDs)
-        range_name = f"'{os.getenv('GOOGLE_SHEET_NAME', 'Products')}!'!A:A"
-        result = service.spreadsheets().values().get(
-            spreadsheetId=sheet_id,
-            range=range_name
-        ).execute()
-        values = result.get('values', [])
-        if values:
-            for row in values[1:]:  # Skip header
-                if len(row) > 0 and str(row[0]).strip() == str(order_id).strip():
-                    return True
-        return False
-    except Exception:
-        # If we can't check, assume no duplicate (with warning)
-        return False
+#         # Read the sheet to check for the order ID
+#         # Read first column (order IDs)
+#         range_name = f"'{os.getenv('GOOGLE_SHEET_NAME', 'Products')}!'!A:A"
+#         result = service.spreadsheets().values().get(
+#             spreadsheetId=sheet_id,
+#             range=range_name
+#         ).execute()
+#         values = result.get('values', [])
+#         if values:
+#             for row in values[1:]:  # Skip header
+#                 if len(row) > 0 and str(row[0]).strip() == str(order_id).strip():
+#                     return True
+#         return False
+#     except Exception:
+#         # If we can't check, assume no duplicate (with warning)
+#         return False
 
 def chat(
     message: str,
@@ -386,10 +408,14 @@ def chat(
 
     obs: dict[str, Any] = {
         "duration_ms": 0,
+        "provider": LLM_PROVIDER,
+        "model": OPENAI_MODEL,
         "openai_called": False,
         "tool_called": False,
         "lookup_args": [],
         "error": None,
+        "tool_rounds": 0,
+        "token_usage": None,
     }
 
     # Gracefully reject empty / non-string input instead of sending it to the model.
@@ -487,16 +513,33 @@ def chat(
             # No tool calls → final reply
             if not assistant_message.tool_calls:
                 final_reply = assistant_message.content or ""
+                # Record token usage when available from the provider response
+                usage = getattr(response, "usage", None)
+                if usage:
+                    obs["token_usage"] = {
+                        "prompt_tokens": getattr(usage, "prompt_tokens", None),
+                        "completion_tokens": getattr(usage, "completion_tokens", None),
+                        "total_tokens": getattr(usage, "total_tokens", None),
+                    }
                 logger.info(
-                    "chat complete | model=%s | tool_calls=%d | msg_preview=%.80s",
+                    "chat complete | provider=%s | model=%s | tool_calls=%d | msg_preview=%.80s",
+                    LLM_PROVIDER,
                     OPENAI_MODEL,
                     len(tool_calls_made),
                     final_reply,
                 )
                 break
 
-            # ---- Process each tool call ------------------------------------
-            for tc in assistant_message.tool_calls:
+            # ---- Process tool calls ----------------------------------------
+            # Groq does NOT support parallel tool calls, so when using Groq
+            # we process only the first tool call per iteration, feed its
+            # result back to the model, and continue the loop. Other
+            # providers (OpenAI, Cloudflare) support parallel calls.
+            tool_calls = assistant_message.tool_calls
+            if LLM_PROVIDER == "groq":
+                tool_calls = tool_calls[:1]  # Process only the first tool call
+
+            for tc in tool_calls:
                 fn_name = tc.function.name
                 try:
                     fn_args = (
@@ -513,7 +556,8 @@ def chat(
                 tool_calls_made.append({"tool": fn_name, "arguments": fn_args})
 
                 logger.info(
-                    "tool_call | fn=%s | args=%s",
+                    "tool_call | provider=%s | fn=%s | args=%s",
+                    LLM_PROVIDER,
                     fn_name,
                     json.dumps(fn_args, ensure_ascii=False),
                 )
@@ -555,7 +599,8 @@ def chat(
                 tool_results.append({"tool": fn_name, "result": parsed_result})
 
                 logger.info(
-                    "tool_result | fn=%s | rows_returned=%s",
+                    "tool_result | provider=%s | fn=%s | rows_returned=%s",
+                    LLM_PROVIDER,
                     fn_name,
                     len(parsed_result) if isinstance(parsed_result, list) else "non-list",
                 )
@@ -569,6 +614,7 @@ def chat(
                     }
                 )
             _tool_rounds += 1
+            obs["tool_rounds"] = _tool_rounds
             if _tool_rounds >= 2:
                 _force_answer = True
 
@@ -578,9 +624,18 @@ def chat(
 
     except Exception as exc:
         obs["error"] = str(exc)
-        logger.exception("Unexpected error in chat()")
-        # Surface a safe message — never expose internal details to the customer
-        final_reply = "Sorry, something went wrong. Please try again in a moment."
+        logger.exception("Unexpected error in chat() | provider=%s", LLM_PROVIDER)
+        # Provide user-friendly error messages for known provider failures
+        err_text = str(exc).lower()
+        if "429" in err_text or "rate limit" in err_text:
+            final_reply = "The AI service is temporarily busy. Please try again in a moment."
+        elif "authentication" in err_text or "api key" in err_text:
+            final_reply = "The AI service is not configured correctly. Please contact support."
+        elif "timeout" in err_text or "timed out" in err_text:
+            final_reply = "The AI service took too long to respond. Please try again."
+        else:
+            # Surface a safe message — never expose internal details to the customer
+            final_reply = "Sorry, something went wrong. Please try again in a moment."
 
     # ---- Observability: record total wall-clock time -----------------------
     obs["duration_ms"] = round((time.monotonic() - t_start) * 1000)
